@@ -4,21 +4,18 @@ module for HOD to populate halos with galaxies
 
 
 '''
-#HOD model
+import numpy as np
 from scipy.stats import norm
+from scipy.special import erf
+
+# halotools
 from halotools.empirical_models import HodModelFactory, OccupationComponent
 from halotools.sim_manager import UserSuppliedHaloCatalog
 from halotools.empirical_models import NFWPhaseSpace
-import numpy as np
-import math
-from scipy.special import erf
-from abacusnbody.data.compaso_halo_catalog import CompaSOHaloCatalog
-import asdf
 
-#Central galaxy occupation
+
 class CustomCentrals(OccupationComponent):
-    r"""Gaussian HOD model for the central galaxy occupation. 
-    Occupates central galaxies depending on the halo mass.
+    r"""HOD model for the central galaxy occupation. Populates central galaxies depending on the halo mass.
     """
     def __init__(self, threshold=-23, **params):
         r"""
@@ -59,9 +56,8 @@ class CustomCentrals(OccupationComponent):
         sigma_M = self.param_dict['sigma_M']
         Ac = self.param_dict['Ac']
         
-        return Ac/(2*math.pi)**0.5/sigma_M * np.exp(-(np.log10(halo_mass) - logMc)**2/2/sigma_M**2)
+        return Ac/(2*np.pi)**0.5/sigma_M * np.exp(-(np.log10(halo_mass) - logMc)**2/2/sigma_M**2)
 
-#Satellite galaxy occupation
 class CustomSatellites(OccupationComponent):
     r"""Power-law model for the satellite galaxy occupation. 
     Occupates satellite galaxies depending on the halo mass.
@@ -110,7 +106,7 @@ class CustomSatellites(OccupationComponent):
 
         return np.nan_to_num(np.maximum(dist, 0) * (halo_mass > 10**logM0))
 
-#velocity of satellite galaxies
+
 class Velocity(object):
     r"""Populate satellite galaxy velocity with gaussian distribution aroung the halo velocity.
     The dispersion is calculated as halo particle velocity dispersion times galaxy velocity bias fv.
@@ -142,29 +138,29 @@ class Velocity(object):
         table['vz'][:] = table['halo_vz'][:]+norm.rvs(loc=0.0, scale=1.0, size=len(table["halo_vz"][:]))*self.fv/3**0.5*table['halo_sigmav'][:]
         
 
-
 def PopulateGalaxies(halo, **cent_params, **sat_params):
-    r"""
-        Parameters
-        ----------
-        halo : object
-            Halo class instance, which holds the information of halos.
-            Must include
-            redshift, boxsize, particle mass, halo position, halo velocity, virial radius, scale radius and the halo particle velocity dispersion
+    """ Populate 
+    
+    Parameters
+    ----------
+    halo : object
+        Halo class instance, which holds the information of halos.
+        Must include
+        redshift, boxsize, particle mass, halo position, halo velocity, virial radius, scale radius and the halo particle velocity dispersion
 
-        cent_params : Dictionary
-            Dictionary of HOD parameters used for the central galaxy occupation.
-            Must include 'logMc','sigma_M' and 'Ac'.
+    cent_params : Dictionary
+        Dictionary of HOD parameters used for the central galaxy occupation.
+        Must include 'logMc','sigma_M' and 'Ac'.
 
-        sat_params : Dictionary
-            Dictionary of HOD parameters used for the satellite galaxy occupation.
-            Must include 'As','logM0' and 'alpha'.
-            
-        Returns
-        --------
-        table of galaxy properties
+    sat_params : Dictionary
+        Dictionary of HOD parameters used for the satellite galaxy occupation.
+        Must include 'As','logM0' and 'alpha'.
+        
+    Returns
+    --------
+    table of galaxy properties
 
-        """
+    """
     redshift = halo.redshift
 
     custom_phase_space = NFWPhaseSpace(conc_mass_model='direct_from_halo_catalog', redshift=redshift)
